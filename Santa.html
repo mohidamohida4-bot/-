@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Santa Aurora Flip 2025 | Neon Gravity Runner</title>
+    <meta name="description" content="Help Santa navigate the neon caves in this high-speed gravity flipping adventure.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Achievement Toast -->
+    <div id="ach-alert" role="alert">🏆 Achievement: Aurora Master!</div>
+
+    <!-- UI Overlay -->
+    <div id="ui-container">
+        <div class="stats-item">Gifts: <span id="score">0</span></div>
+        <div class="stats-item">Rank: <span id="rank">Rookie</span></div>
+    </div>
+
+    <!-- Game Menu -->
+    <div id="overlay">
+        <div class="menu-content">
+            <h1 class="glow-text">AURORA FLIP 🎅</h1>
+            <p class="description">Santa is lost in the neon caves.<br>Tap to flip gravity and survive.</p>
+            <button class="btn-start" onclick="game.start()">INITIATE SEARCH</button>
+            <div class="controls-hint">Tap or Press Space to Flip</div>
+        </div>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <script src="game.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+:root {
+    --neon-blue: #00f2ff;
+    --santa-red: #d42426;
+    --bg-dark: #02050a;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-dark);
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#game-canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    box-shadow: 0 0 50px rgba(0, 242, 255, 0.1);
+}
+
+/* UI Elements */
+#ui-container {
+    position: absolute;
+    top: 20px;
+    width: 90%;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.stats-item {
+    color: var(--neon-blue);
+    font-weight: 900;
+    font-size: 1.5rem;
+    text-shadow: 0 0 10px var(--neon-blue);
+}
+
+#rank { color: #fff; }
+
+/* Menus */
+#overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    text-align: center;
+}
+
+.glow-text {
+    color: var(--neon-blue);
+    font-size: clamp(2rem, 8vw, 4rem);
+    text-shadow: 0 0 20px var(--neon-blue);
+    margin-bottom: 10px;
+}
+
+.btn-start {
+    background: var(--santa-red);
+    color: white;
+    padding: 15px 40px;
+    font-size: 1.5rem;
+    border: 2px solid #fff;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 20px var(--santa-red);
+}
+
+.btn-start:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px var(--santa-red);
+}
+
+/* Achievement Popup */
+#ach-alert {
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--neon-blue);
+    color: #000;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: bold;
+    transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 200;
+}
+
+
+
+
+
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const W = 800, H = 450;
+canvas.width = W; canvas.height = H;
+
+const game = {
+    active: false,
+    score: 0,
+    speed: 6,
+    gravity: 1,
+    auroraHue: 200,
+    objects: [],
+    santa: { x: 120, y: 340, targetY: 340 },
+    snow: Array.from({length: 40}, () => ({x: Math.random()*W, y: Math.random()*H, s: Math.random()*2+1})),
+
+    start() {
+        this.score = 0;
+        this.speed = 6;
+        this.objects = [];
+        this.gravity = 1;
+        this.santa.y = 340;
+        this.santa.targetY = 340;
+        this.active = true;
+        document.getElementById('overlay').style.display = 'none';
+        this.spawn();
+    },
+
+    spawn() {
+        if(!this.active) return;
+        const isGift = Math.random() > 0.4;
+        this.objects.push({
+            x: W + 100,
+            y: Math.random() > 0.5 ? 345 : 55,
+            type: isGift ? 'gift' : 'spike',
+            icon: isGift ? '🌟' : (Math.random() > 0.5 ? '💀' : '🧊')
+        });
+        setTimeout(() => this.spawn(), Math.max(450, 1400 - (this.score/2)));
+    },
+
+    gameOver() {
+        this.active = false;
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'flex';
+        overlay.querySelector('h1').innerText = "SYSTEM REBOOT";
+        overlay.querySelector('p').innerText = `Search Distance: ${(this.score/10)|0}m`;
+    },
+
+    update() {
+        this.auroraHue = (this.auroraHue + 0.2) % 360;
+        
+        // Draw Background
+        ctx.fillStyle = `hsl(${this.auroraHue}, 30%, 5%)`;
+        ctx.fillRect(0, 0, W, H);
+
+        // Snow
+        ctx.fillStyle = "white";
+        this.snow.forEach(p => {
+            p.x = (p.x - p.s + W) % W;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI*2); ctx.fill();
+        });
+
+        if (this.active) {
+            this.score++;
+            document.getElementById('score').innerText = (this.score/10)|0;
+            
+            // Rank Logic
+            const rankEl = document.getElementById('rank');
+            if(this.score > 2000) rankEl.innerText = "Legend";
+            else if(this.score > 1000) rankEl.innerText = "Master";
+
+            this.santa.y += (this.santa.targetY - this.santa.y) * 0.15;
+
+            // Draw Santa
+            ctx.shadowBlur = 15; ctx.shadowColor = "#00f2ff";
+            ctx.font = '55px Arial';
+            if(this.gravity === -1) {
+                ctx.save();
+                ctx.translate(this.santa.x+25, this.santa.y+25);
+                ctx.scale(1, -1);
+                ctx.fillText('🎅', -25, 25);
+                ctx.restore();
+            } else {
+                ctx.fillText('🎅', this.santa.x, (this.santa.y|0) + 45);
+            }
+            ctx.shadowBlur = 0;
+
+            // Obstacles
+            for (let i = this.objects.length - 1; i >= 0; i--) {
+                let o = this.objects[i];
+                o.x -= this.speed;
+                ctx.fillText(o.icon, o.x|0, o.y + 35);
+
+                if (Math.abs(o.x - this.santa.x) < 40 && Math.abs(o.y - this.santa.y) < 40) {
+                    if(o.type === 'spike') this.gameOver();
+                    else { this.score += 50; this.objects.splice(i, 1); }
+                }
+                if (o.x < -100) this.objects.splice(i, 1);
+            }
+            this.speed += 0.001;
+        }
+        requestAnimationFrame(() => this.update());
+    }
+};
+
+// Input Handling
+const flip = () => {
+    if(!game.active) return;
+    game.gravity *= -1;
+    game.santa.targetY = (game.gravity === 1) ? 340 : 50;
+};
+
+window.addEventListener('pointerdown', flip);
+window.addEventListener('keydown', (e) => { if(e.code === 'Space') flip(); });
+
+game.update();
+                    
